@@ -28,8 +28,7 @@ impl IntoRects for RenderableCursor {
             width *= 2.;
         }
 
-        match self.shape() {
-            let shape = match block_replace {
+        let shape = match block_replace {
             None => self.shape(),
             Some(block_replace) => match self.shape() {
                 CursorShape::Beam
@@ -42,7 +41,7 @@ impl IntoRects for RenderableCursor {
             CursorShape::Beam => beam(x, y, height, thickness, self.color()),
             CursorShape::Underline => underline(x, y, width, height, thickness, self.color()),
             CursorShape::HollowBlock => hollow(x, y, width, height, thickness, self.color()),
-            RenderRect::new_cur(x, y, width, height, self.color(), 1.0).into(),
+            _ => RenderRect::new_cur(x, y, width, height, self.color(), 1.0).into(),
         }
     }
 }
@@ -53,12 +52,24 @@ pub struct CursorRects {
     rects: [Option<RenderRect>; 4],
     index: usize,
 }
+
 impl CursorRects {
-    pub fn interpolate(&mut self, other: &Self, factor: f32, spring: f32) {
+    pub fn interpolate(
+        &mut self,
+        other: &Self,
+        factor: f32,
+        spring: f32,
+        max_s_x: f32,
+        max_s_y: f32
+    ) {
         for (mine, theirs) in self.rects.iter_mut().zip(other.rects.iter()) {
             *mine = match &mine {
                 Some(mine_v) => match theirs {
-                    Some(theirs_v) => Some(mine_v.interpolate(theirs_v, factor, spring)),
+                    Some(theirs_v) => Some(
+                        mine_v.interpolate(
+                            theirs_v, factor, spring, max_s_x, max_s_y
+                        )
+                    ),
                     None => None
                 }
                 None => *theirs
@@ -66,6 +77,7 @@ impl CursorRects {
         }
     }
 }
+
 impl From<RenderRect> for CursorRects {
     fn from(rect: RenderRect) -> Self {
         Self { rects: [Some(rect), None, None, None], index: 0 }
